@@ -1,40 +1,69 @@
 import { Link, useParams } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import useFetch from "../../hooks/useFetch";
 
 const Product = () => {
   const { id } = useParams();
   const { data, loading } = useFetch(`/products/${id}?populate=*`);
+
   const [quantity, setQuantity] = useState(1);
+  const [isWishlisted, setIsWishlisted] = useState(false);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-[#05010a] via-[#0b0320] to-[#001a1a] text-white px-6 md:px-10 py-10">
-        <p className="text-white/70 text-lg">Loading product...</p>
-      </div>
+  const rawProduct = data?.data || data;
+
+  const product = rawProduct?.attributes
+    ? {
+        id: rawProduct.id,
+        documentId: rawProduct.documentId,
+        ...rawProduct.attributes,
+      }
+    : rawProduct;
+
+  const imageUrl = useMemo(() => {
+    if (!product) return "";
+
+    const image = product?.image;
+
+    const url =
+      image?.[0]?.url ||
+      image?.url ||
+      image?.data?.attributes?.url ||
+      image?.data?.[0]?.attributes?.url;
+
+    if (url) {
+      return url.startsWith("http") ? url : `http://localhost:1338${url}`;
+    }
+
+    return `https://placehold.co/700x820?text=${encodeURIComponent(
+      product.name || "Product"
+    )}`;
+  }, [product]);
+
+  useEffect(() => {
+    if (!product?.id) return;
+
+    const storedWishlist = JSON.parse(localStorage.getItem("wishlist")) || [];
+    const alreadyWishlisted = storedWishlist.some(
+      (item) => item.id === product.id
     );
-  }
 
-  const product = data?.data || data;
+    setIsWishlisted(alreadyWishlisted);
+  }, [product?.id]);
 
-  if (!product) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-[#05010a] via-[#0b0320] to-[#001a1a] text-white px-6 md:px-10 py-10">
-        <p className="text-white/70 text-lg">No product found.</p>
-      </div>
-    );
-  }
-
-  const imageUrl =
-    product?.image?.[0]?.url
-      ? `http://localhost:1338${product.image[0].url}`
-      : product?.image?.url
-      ? `http://localhost:1338${product.image.url}`
-      : `https://placehold.co/700x820?text=${encodeURIComponent(product.name || "Product")}`;
+  const buildProductItem = () => {
+    return {
+      id: product.id,
+      documentId: product.documentId,
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      quantity,
+      image: imageUrl,
+    };
+  };
 
   const handleAddToCart = () => {
     const existingCart = JSON.parse(localStorage.getItem("cart")) || [];
-
     const existingItem = existingCart.find((item) => item.id === product.id);
 
     let updatedCart;
@@ -46,70 +75,101 @@ const Product = () => {
           : item
       );
     } else {
-      updatedCart = [
-        ...existingCart,
-        {
-          id: product.id,
-          documentId: product.documentId,
-          name: product.name,
-          description: product.description,
-          price: product.price,
-          quantity,
-          image: imageUrl,
-        },
-      ];
+      updatedCart = [...existingCart, buildProductItem()];
     }
 
     localStorage.setItem("cart", JSON.stringify(updatedCart));
     alert(`${product.name} added to cart`);
   };
 
+  const handleAddToWishlist = () => {
+    const existingWishlist = JSON.parse(localStorage.getItem("wishlist")) || [];
+    const existingItem = existingWishlist.find(
+      (item) => item.id === product.id
+    );
+
+    let updatedWishlist;
+
+    if (existingItem) {
+      updatedWishlist = existingWishlist.filter(
+        (item) => item.id !== product.id
+      );
+
+      localStorage.setItem("wishlist", JSON.stringify(updatedWishlist));
+      setIsWishlisted(false);
+      alert(`${product.name} removed from wishlist`);
+    } else {
+      updatedWishlist = [...existingWishlist, buildProductItem()];
+
+      localStorage.setItem("wishlist", JSON.stringify(updatedWishlist));
+      setIsWishlisted(true);
+      alert(`${product.name} added to wishlist`);
+    }
+  };
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-[#070311] text-white px-6 py-16">
+        Loading product...
+      </main>
+    );
+  }
+
+  if (!product) {
+    return (
+      <main className="min-h-screen bg-[#070311] text-white px-6 py-16">
+        No product found.
+      </main>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#05010a] via-[#0b0320] to-[#001a1a] text-white px-6 md:px-10 py-10">
+    <main className="min-h-screen bg-gradient-to-br from-[#070311] via-[#100622] to-[#07111f] text-white px-6 md:px-16 py-14">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-6 text-sm text-white/50">
-          <Link to="/" className="hover:text-white transition">
+        <div className="mb-8 text-sm text-white/50">
+          <Link to="/" className="hover:text-purple-300 transition">
             Home
           </Link>
           <span className="mx-2">›</span>
-          <span className="text-purple-300">{product.name}</span>
+          <span className="text-purple-300 font-semibold">{product.name}</span>
         </div>
 
-        <div className="grid lg:grid-cols-[1fr_1fr] gap-10 items-start">
-          <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-md shadow-xl p-4 md:p-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
+          <div className="bg-white/5 border border-white/10 rounded-3xl p-5 shadow-2xl">
             <img
               src={imageUrl}
               alt={product.name}
-              className="w-full rounded-2xl border border-white/10"
+              className="w-full rounded-2xl object-cover max-h-[760px]"
             />
           </div>
 
-          <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-md shadow-xl p-6 md:p-8">
-            <p className="uppercase tracking-[0.2em] text-sm text-cyan-300 mb-3">
+          <div className="bg-white/5 border border-white/10 rounded-3xl p-8 md:p-10 shadow-2xl">
+            <p className="uppercase tracking-[0.35em] text-cyan-300 text-sm font-bold mb-4">
               Ravesona Product
             </p>
 
-            <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-purple-400 to-cyan-400 text-transparent bg-clip-text">
+            <h1 className="text-5xl md:text-6xl font-extrabold mb-5 bg-gradient-to-r from-purple-400 via-indigo-300 to-cyan-300 text-transparent bg-clip-text">
               {product.name}
             </h1>
 
-            <p className="text-white/65 text-lg leading-8 mb-6">
+            <p className="text-white/60 text-lg mb-8">
               {product.description || "No description available."}
             </p>
 
-            <div className="flex items-center gap-4 mb-8">
-              <span className="text-3xl font-semibold text-white">
+            <div className="flex items-center gap-4 mb-10">
+              <p className="text-4xl font-extrabold">
                 ${Number(product.price || 0).toFixed(2)}
-              </span>
-              <span className="px-3 py-1 rounded-full border border-purple-400/30 bg-purple-500/10 text-sm text-purple-200">
+              </p>
+
+              <span className="px-4 py-2 rounded-full bg-purple-500/20 border border-purple-400/30 text-purple-200 text-sm font-semibold">
                 Available Now
               </span>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-black/20 p-5 mb-8">
-              <h2 className="text-xl font-semibold mb-4">Quantity</h2>
+            <div className="border border-white/10 rounded-2xl p-6 mb-8">
+              <h2 className="text-xl font-bold mb-5">Quantity</h2>
 
-              <div className="inline-flex items-center gap-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+              <div className="inline-flex items-center gap-6 bg-white/5 border border-white/10 rounded-2xl px-5 py-3">
                 <button
                   onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
                   className="w-10 h-10 rounded-xl border border-white/10 hover:bg-white/10 transition"
@@ -117,7 +177,7 @@ const Product = () => {
                   -
                 </button>
 
-                <span className="min-w-[30px] text-center text-lg">{quantity}</span>
+                <span className="text-xl font-bold">{quantity}</span>
 
                 <button
                   onClick={() => setQuantity((prev) => prev + 1)}
@@ -128,42 +188,48 @@ const Product = () => {
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4 mb-8">
+            <div className="flex flex-wrap gap-4 mb-8">
               <button
                 onClick={handleAddToCart}
-                className="px-6 py-4 rounded-2xl bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-semibold hover:opacity-90 transition"
+                className="px-8 py-4 rounded-2xl bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-400 hover:to-indigo-400 font-bold transition shadow-lg shadow-purple-900/30"
               >
                 Add to Cart
               </button>
 
-              <button className="px-6 py-4 rounded-2xl border border-white/15 text-white hover:bg-white/10 transition">
-                Add to Wishlist
+              <button
+                onClick={handleAddToWishlist}
+                className={`px-8 py-4 rounded-2xl border font-bold transition ${
+                  isWishlisted
+                    ? "border-purple-400/50 bg-purple-500/20 text-purple-200"
+                    : "border-white/10 bg-white/5 text-white hover:bg-white/10"
+                }`}
+              >
+                {isWishlisted ? "Wishlisted" : "Add to Wishlist"}
               </button>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
-              <h2 className="text-xl font-semibold mb-3">Product Details</h2>
-              <ul className="space-y-2 text-white/65">
+            <div className="border border-white/10 rounded-2xl p-6">
+              <h2 className="text-2xl font-bold mb-4">Product Details</h2>
+
+              <ul className="space-y-3 text-white/65">
                 <li>• Physical collectible product</li>
                 <li>• Designed for the Ravesona experience</li>
                 <li>• Great for gifting, collecting, and display</li>
                 <li>• Stored in your cart until checkout</li>
               </ul>
             </div>
+
+            <div className="mt-8">
+              <h2 className="text-2xl font-bold mb-3">Description</h2>
+              <p className="text-white/60 leading-relaxed">
+                {product.description ||
+                  "This product is part of the Ravesona store experience. More details can be added here later."}
+              </p>
+            </div>
           </div>
         </div>
-
-        <div className="mt-10 rounded-3xl border border-white/10 bg-white/5 backdrop-blur-md shadow-xl p-6 md:p-8">
-          <h2 className="text-3xl font-bold mb-4 bg-gradient-to-r from-purple-400 to-cyan-400 text-transparent bg-clip-text">
-            Description
-          </h2>
-          <p className="text-white/70 leading-8">
-            {product.description ||
-              "This product is part of the Ravesona store experience. More details can be added here later."}
-          </p>
-        </div>
       </div>
-    </div>
+    </main>
   );
 };
 

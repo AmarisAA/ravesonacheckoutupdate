@@ -3,37 +3,23 @@ import {
   RouterProvider,
   Outlet,
   useLocation,
-} from 'react-router-dom';
-import { useEffect} from 'react';
-import { ToastContainer} from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-//importing components
-import Home from './Pages/Home/Home';
-import Category from './Pages/Categories/Categories';
-import Product from './Pages/Products/Product';
-import CheckoutInfo from './Pages/CheckoutInfo/CheckoutInfo';
-import Payment from './Pages/CheckoutPayment/Payment';
-import About from './Pages/About/About';
-import Navbar from './components/Navbar/Navbar';
-import Footer from './components/Footer/Footer';
-import MyCart from './Pages/My_cart/MyCart';
+} from "react-router-dom";
+import { useEffect } from "react";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
+import Home from "./Pages/Home/Home";
+import Category from "./Pages/Categories/Categories";
+import Product from "./Pages/Products/Product";
+import CheckoutInfo from "./Pages/CheckoutInfo/CheckoutInfo";
+import Payment from "./Pages/CheckoutPayment/Payment";
+import About from "./Pages/About/About";
+import Navbar from "./components/Navbar/Navbar";
+import Footer from "./components/Footer/Footer";
+import MyCart from "./Pages/My_cart/MyCart";
+import Wishlist from "./Pages/Wishlist/Wishlist";
 
 function App() {
-
-  
-
-
-  const Layout = () => {
-    return (
-      <div className="app">
-        <Navbar />
-        <Outlet />
-        <Footer />
-      </div>
-    );
-  };
-
-  // Scroll to top on route change
   const ScrollToTop = () => {
     const { pathname } = useLocation();
 
@@ -44,43 +30,52 @@ function App() {
     return null;
   };
 
-  // creating a routing
+  const Layout = () => {
+    return (
+      <>
+        <ScrollToTop />
+        <Navbar />
+        <Outlet />
+        <Footer />
+      </>
+    );
+  };
+
   const router = createBrowserRouter([
     {
-      path: '/',
-      element: (
-        <>
-          <ScrollToTop />
-          <Layout />
-        </>
-      ),
+      path: "/",
+      element: <Layout />,
       children: [
         {
-          path: '/',
-          element: <Home  />,
+          path: "/",
+          element: <Home />,
         },
         {
-          path: '/categories/:id',
+          path: "/categories/:id",
           element: <Category />,
         },
         {
-          path: '/product/:id',
+          path: "/product/:id",
           element: <Product />,
         },
         {
-          path: '/mycart',
+          path: "/wishlist",
+          element: <Wishlist />,
+        },
+        {
+          path: "/mycart",
           element: <MyCart />,
         },
         {
-          path: '/checkout/information',
+          path: "/checkout/information",
           element: <CheckoutInfo />,
         },
         {
-          path: '/checkout/payment',
+          path: "/checkout/payment",
           element: <Payment />,
         },
         {
-          path: '/about',
+          path: "/about",
           element: <About />,
         },
       ],
@@ -90,18 +85,7 @@ function App() {
   return (
     <>
       <RouterProvider router={router} />
-      <ToastContainer
-        position="top-center"
-        autoClose={5000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
-      />
+      <ToastContainer position="top-right" theme="dark" />
     </>
   );
 }
